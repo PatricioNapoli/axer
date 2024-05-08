@@ -1,0 +1,16 @@
+[package]
+name = "axer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+argh = "0.1.12"
+reqwest = "0.12.4"
+serde = "1.0.201"
+thiserror = "1.0.60"
+tokio = { version = "1.37.0", features = ["rt-multi-thread", "net", "macros", "time"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+url = "2.5.0"

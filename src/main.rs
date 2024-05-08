@@ -9,7 +9,12 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {}
+pub enum Error {
+    #[error("currency parse error: {0}")]
+    ParseIntError(#[from] std::num::ParseIntError),
+    #[error("client error: {0}")]
+    ClientError(#[from] client::Error),
+}
 
 #[derive(FromArgs, Debug)]
 /// Axer CLI args.
@@ -21,6 +26,10 @@ pub struct Args {
     /// network timeout in ms
     #[argh(option, default = "default_timeout_ms()")]
     pub timeout: u64,
+
+    /// arweave bundle transaction ID
+    #[argh(option)]
+    pub tx_id: String,
 }
 
 fn default_base_url() -> String {
@@ -41,10 +50,12 @@ async fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
     info!("running with {args:?}");
 
-    let client: Client = Client::new(args.url, args.timeout);
-    let res = client.get("/").await.unwrap();
-    let txt = res.text().await.unwrap();
-    info!("response: {txt}");
+    let client = Client::new(args.url, args.timeout);
+    let info = client.get_network_info().await?;
+    info!("connected to arweave network: {info:?}");
+
+    let tx = client.get_bundle_tx(args.tx_id).await?;
+    info!("transaction: {tx:?}");
 
     Ok(())
 }

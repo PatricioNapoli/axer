@@ -1,6 +1,7 @@
 mod client;
+mod utils;
 
-use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_DB_FILENAME, DEFAULT_TIMEOUT_MS};
+use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS};
 use argh::FromArgs;
 use std::io::Write;
 use tracing::level_filters::LevelFilter;
@@ -32,11 +33,19 @@ pub struct Args {
 
     /// index db filename
     #[argh(option, default = "default_db_filename()")]
-    pub db_filename: String,
+    pub db_file: String,
+
+    /// output directory for parsed files
+    #[argh(option, default = "default_out_dir()", short = 'o')]
+    pub out_dir: String,
 
     /// arweave bundle transaction ID
     #[argh(option)]
     pub tx_id: Option<String>,
+
+    /// batch filename, enables batch mode
+    #[argh(option, short = 'b')]
+    pub batch_file: Option<String>,
 
     /// interactive mode
     #[argh(switch, short = 'i')]
@@ -52,7 +61,11 @@ fn default_timeout_ms() -> u64 {
 }
 
 fn default_db_filename() -> String {
-    DEFAULT_DB_FILENAME.to_string()
+    "db.b".to_string()
+}
+
+fn default_out_dir() -> String {
+    "out/".to_string()
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
@@ -65,17 +78,17 @@ async fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
     info!("running with {args:?}");
 
-    let mut client = Client::new(args.url, args.timeout, args.db_filename);
+    let mut client = Client::new(args.url, args.timeout, args.db_file);
 
     let info = client.get_network_info().await?;
-    info!("connected to arweave network: {info:?}");
+    info!("connected to: {info}");
 
     match args.interactive {
         true => handle_interactive(&mut client).await,
         false => match args.tx_id {
             Some(_) => {
                 let tx = client.get_bundle_tx(&args.tx_id.unwrap()).await?;
-                info!("transaction: {tx:?}");
+                info!("transaction: {tx}");
                 Ok(())
             }
             None => {
@@ -97,7 +110,9 @@ async fn handle_interactive(client: &mut Client) -> Result<(), Error> {
         std::io::stdin().read_line(&mut input).unwrap();
 
         if input.trim() == "q" {
-            // Send client.dump cache
+            info!("saving db");
+            // TODO: save cache
+            info!("bye");
             return Ok(());
         }
 
@@ -106,7 +121,7 @@ async fn handle_interactive(client: &mut Client) -> Result<(), Error> {
         let tx = client.get_bundle_tx(tx_id).await;
         match tx {
             Ok(tx) => {
-                info!("transaction: {tx:?}");
+                info!("transaction: {tx}");
             }
             Err(e) => {
                 error!("error: {e:?}");

@@ -1,3 +1,4 @@
+use crate::client::bundle::Bundle;
 use crate::client::network::Network;
 use crate::client::tx::BundleTx;
 use reqwest::StatusCode;
@@ -6,24 +7,25 @@ use std::time::Duration;
 
 pub const DEFAULT_BASE_URL: &str = "https://arweave.net";
 pub const DEFAULT_TIMEOUT_MS: u64 = 5000;
-pub const DEFAULT_DB_FILENAME: &str = "db.b";
 
-mod base64;
-mod currency;
+mod bundle;
 mod network;
+mod tags;
 mod tx;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("request error: {0}")]
     RequestError(#[from] reqwest::Error),
-    #[error("status error: {status:?} {message:?}")]
+    #[error("status error: {status} {message}")]
     StatusError {
         status: StatusCode,
         message: String,
     },
     #[error("url error: {0}")]
     UrlError(#[from] url::ParseError),
+    #[error("bundle error: {0}")]
+    BundleError(#[from] bundle::Error),
 }
 
 pub struct Client {
@@ -64,7 +66,10 @@ impl Client {
 
             return match response.status() {
                 StatusCode::OK => {
-                    let tx = response.json::<BundleTx>().await.map_err(Error::from)?;
+                    let mut tx = response.json::<BundleTx>().await.map_err(Error::from)?;
+                    let tx_bundle_data = self.get_bundle_data(&tx).await?;
+                    tx.data = tx_bundle_data;
+
                     self.cache.insert(id.to_string(), tx);
                     Ok(self.cache.get(id).unwrap())
                 }
@@ -76,5 +81,20 @@ impl Client {
         }
 
         Ok(self.cache.get(id).unwrap())
+    }
+
+    async fn get_bundle_data(&self, tx: &BundleTx) -> Result<Bundle, Error> {
+        let url = self.base_url.join(format!("{}", tx.id).as_str())?;
+        let response = self.client.get(url).send().await.map_err(Error::from)?;
+
+        match response.status() {
+            StatusCode::OK => {
+                Ok(Bundle::new(response.bytes().await.map_err(Error::from)?.as_ref())?)
+            }
+            status => Err(Error::StatusError {
+                status,
+                message: response.text().await.unwrap(),
+            }),
+        }
     }
 }

@@ -1,49 +1,32 @@
-use crate::client::base64::Base64;
-use crate::client::currency::Currency;
-use serde::{de, Deserialize, Deserializer};
-use std::str::FromStr;
+use crate::client::bundle::Bundle;
+use crate::client::tags::Base64Tags;
+use serde::Deserialize;
+use std::fmt::Display;
 
-#[derive(Deserialize, Debug)]
-pub struct Tag<T> {
-    pub name: T,
-    pub value: T,
-}
-
-#[derive(Debug)]
-pub struct U64(pub u64);
-
-impl<'de> Deserialize<'de> for U64 {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct Vis;
-        impl de::Visitor<'_> for Vis {
-            type Value = U64;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a string backed u64 number")
-            }
-
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                u64::from_str(v)
-                    .map(U64)
-                    .map_err(|_| de::Error::custom("failed to parse u64 number"))
-            }
-        }
-        deserializer.deserialize_str(Vis)
-    }
-}
-
-#[derive(Deserialize, Debug)]
+/// A bundle transaction.
+///
+/// Quantity is missing from this struct to avoid Currency parsing.
+#[derive(Deserialize)]
 pub struct BundleTx {
     pub format: u8,
-    pub id: Base64,
-    pub last_tx: Base64,
-    pub owner: Base64,
-    pub tags: Vec<Tag<Base64>>,
-    pub target: Base64,
-    pub quantity: Currency,
-    pub data_root: Base64,
-    pub data: Base64,
-    pub data_size: U64,
-    pub reward: U64,
-    pub signature: Base64,
+    pub id: String,
+    pub last_tx: String,
+    pub owner: String,
+    pub tags: Base64Tags,
+    pub target: String,
+    pub data: Bundle,
+    pub data_root: String,
+    pub data_size: String,
+    pub reward: String,
+    pub signature: String,
+}
+
+impl Display for BundleTx {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Bundle Transaction {{ id: {}, last_tx: {}, tags: {}, data_size: {}}}",
+            self.id, self.last_tx, self.tags, self.data_size
+        )
+    }
 }

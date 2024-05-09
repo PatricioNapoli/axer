@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 pub const WINSTONS_PER_AR: u64 = 1_000_000_000_000;
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default)]
 pub struct Currency {
     arweave: u64, //integer
     winston: u64, //decimal

@@ -1,9 +1,10 @@
 mod client;
 
-use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS};
+use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_DB_FILENAME, DEFAULT_TIMEOUT_MS};
 use argh::FromArgs;
-use tracing::info;
+use std::io::Write;
 use tracing::level_filters::LevelFilter;
+use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -14,6 +15,8 @@ pub enum Error {
     ParseIntError(#[from] std::num::ParseIntError),
     #[error("client error: {0}")]
     ClientError(#[from] client::Error),
+    #[error("args error")]
+    ArgsError,
 }
 
 #[derive(FromArgs, Debug)]
@@ -27,9 +30,17 @@ pub struct Args {
     #[argh(option, default = "default_timeout_ms()")]
     pub timeout: u64,
 
+    /// index db filename
+    #[argh(option, default = "default_db_filename()")]
+    pub db_filename: String,
+
     /// arweave bundle transaction ID
     #[argh(option)]
-    pub tx_id: String,
+    pub tx_id: Option<String>,
+
+    /// interactive mode
+    #[argh(switch, short = 'i')]
+    pub interactive: bool,
 }
 
 fn default_base_url() -> String {
@@ -38,6 +49,10 @@ fn default_base_url() -> String {
 
 fn default_timeout_ms() -> u64 {
     DEFAULT_TIMEOUT_MS
+}
+
+fn default_db_filename() -> String {
+    DEFAULT_DB_FILENAME.to_string()
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
@@ -50,12 +65,52 @@ async fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
     info!("running with {args:?}");
 
-    let client = Client::new(args.url, args.timeout);
+    let mut client = Client::new(args.url, args.timeout, args.db_filename);
+
     let info = client.get_network_info().await?;
     info!("connected to arweave network: {info:?}");
 
-    let tx = client.get_bundle_tx(args.tx_id).await?;
-    info!("transaction: {tx:?}");
+    match args.interactive {
+        true => handle_interactive(&mut client).await,
+        false => match args.tx_id {
+            Some(_) => {
+                let tx = client.get_bundle_tx(&args.tx_id.unwrap()).await?;
+                info!("transaction: {tx:?}");
+                Ok(())
+            }
+            None => {
+                error!("transaction id required -- either use -i flag or --tx-id <id>");
+                Err(Error::ArgsError)
+            }
+        },
+    }
+}
 
-    Ok(())
+async fn handle_interactive(client: &mut Client) -> Result<(), Error> {
+    println!("Enter an Arweave bundle transaction id or q to save db and exit");
+
+    loop {
+        print!("> ");
+        std::io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+
+        if input.trim() == "q" {
+            // Send client.dump cache
+            return Ok(());
+        }
+
+        let tx_id = input.trim();
+
+        let tx = client.get_bundle_tx(tx_id).await;
+        match tx {
+            Ok(tx) => {
+                info!("transaction: {tx:?}");
+            }
+            Err(e) => {
+                error!("error: {e:?}");
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-use crate::client::tags::Base64Tags;
+use crate::bundle::tags::Base64Tags;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 

@@ -1,3 +1,4 @@
+mod bundle;
 mod cache;
 mod cli;
 mod client;

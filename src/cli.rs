@@ -1,7 +1,7 @@
+use crate::bundle::tx::BundleTx;
+use crate::bundle::Bundle;
 use crate::cache::Cache;
 use crate::client;
-use crate::client::bundle::Bundle;
-use crate::client::tx::BundleTx;
 use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS};
 use crate::utils::file;
 use argh::FromArgs;

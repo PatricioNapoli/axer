@@ -1,12 +1,16 @@
-use crate::client::signatures::get_sig_types;
-use crate::client::tags;
-use crate::client::tags::Base64Tags;
+use crate::bundle::signatures::get_sig_types;
+use crate::bundle::tags::Base64Tags;
 use crate::utils;
 use apache_avro::Schema;
 use base64::prelude::BASE64_URL_SAFE_NO_PAD as base64;
 use base64::Engine;
 use serde::Serialize;
 use thiserror::Error;
+
+pub mod network;
+pub mod signatures;
+pub mod tags;
+pub mod tx;
 
 #[derive(Debug, Error)]
 pub enum Error {

@@ -1,19 +1,13 @@
-use crate::client::bundle::Bundle;
-use crate::client::network::Network;
-use crate::client::tx::BundleTx;
+use crate::bundle;
+use crate::bundle::network::Network;
+use crate::bundle::tx::BundleTx;
+use crate::bundle::Bundle;
 use apache_avro::Schema;
 use reqwest::StatusCode;
 use std::time::Duration;
 
 pub const DEFAULT_BASE_URL: &str = "https://arweave.net";
 pub const DEFAULT_TIMEOUT_MS: u64 = 5000;
-
-mod network;
-mod tags;
-
-pub mod bundle;
-mod signatures;
-pub mod tx;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

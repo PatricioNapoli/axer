@@ -43,8 +43,8 @@ impl<T: Serialize + DeserializeOwned> Cache<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use super::*;
+    use std::fs;
 
     const TEST_CACHE: &str = "res/test_cache.json";
 

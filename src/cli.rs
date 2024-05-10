@@ -1,14 +1,14 @@
 use crate::cache::Cache;
-use crate::{client};
+use crate::client;
 use crate::client::bundle::Bundle;
 use crate::client::tx::BundleTx;
 use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS};
+use crate::utils::file;
 use argh::FromArgs;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use tokio::task::JoinSet;
 use tracing::{error, info, warn};
-use crate::utils::file;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -39,7 +39,7 @@ pub struct Args {
     #[argh(option, default = "default_out_dir()", short = 'o')]
     pub out_dir: String,
 
-    /// arweave bundle transaction ID
+    /// arweave bundle transaction ID, enables single mode
     #[argh(option)]
     pub tx_id: Option<String>,
 
@@ -47,7 +47,7 @@ pub struct Args {
     #[argh(option, short = 'b')]
     pub batch_file: Option<String>,
 
-    /// interactive mode
+    /// enables interactive mode
     #[argh(switch, short = 'i')]
     pub interactive: bool,
 }

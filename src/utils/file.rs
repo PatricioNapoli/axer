@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::Serialize;
+use std::path::PathBuf;
 use tracing::info;
 
 pub fn save_serde_json<T: Serialize>(path: PathBuf, data: &T) -> Result<(), std::io::Error> {

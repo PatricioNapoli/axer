@@ -20,9 +20,9 @@ pub enum Error {
     ItemDataIncomplete,
     #[error("item data length is less than 2")]
     ItemDataLessThanMinimum,
-    #[error("signature not supported: {sig_type:?}")]
+    #[error("signature not supported: {sig_type_id:?}")]
     SignatureNotSupported {
-        sig_type: u64,
+        sig_type_id: u64,
     },
     #[error("item data length does not include signature")]
     ItemDataLessThanSignature,
@@ -114,14 +114,14 @@ impl BundleItem {
 
         let sig_types = get_sig_types();
 
-        let sig_type = utils::byte_array_to_u64(&data[..2])?;
-        if !sig_types.contains_key(&sig_type) {
+        let sig_type_id = utils::byte_array_to_u64(&data[..2])?;
+        if !sig_types.contains_key(&sig_type_id) {
             return Err(Error::SignatureNotSupported {
-                sig_type,
+                sig_type_id,
             });
         }
 
-        let sig_type = sig_types.get(&sig_type).unwrap();
+        let sig_type = sig_types.get(&sig_type_id).unwrap();
         let sig_length = sig_type.sig_length as usize;
         let pub_length = sig_type.pub_length as usize;
 
@@ -175,7 +175,7 @@ impl BundleItem {
         }
 
         let tag_count = utils::byte_array_to_u64(&data[tags_start..tags_start + 8])?;
-        let tag_bytes_length: usize;
+        let mut tag_bytes_length: usize = 0;
         let tag_bytes: Vec<u8>;
 
         let mut tags = Base64Tags(vec![]);
@@ -195,15 +195,17 @@ impl BundleItem {
             tags = Base64Tags::from_avro(tags_schema, tag_bytes)?;
         }
 
+        let data = base64.encode(&data[tags_start + 16 + tag_bytes_length..]);
+
         Ok(Self {
             id,
             owner,
             target,
             anchor,
             tags,
-            data: Default::default(),
+            data,
             signature,
-            signature_type: 0,
+            signature_type: sig_type_id as u16,
         })
     }
 }

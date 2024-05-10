@@ -10,9 +10,16 @@ pub enum Error {
 }
 
 #[derive(Deserialize)]
-pub struct Cache<T> {
+pub struct Cache<T: Serialize> {
     pub data: HashMap<String, T>,
     file: String,
+}
+
+impl<T: Serialize> Drop for Cache<T> {
+    fn drop(&mut self) {
+        let file = std::fs::File::create(self.file.as_str()).unwrap();
+        serde_json::to_writer(file, &self.data).unwrap();
+    }
 }
 
 impl<T: Serialize + DeserializeOwned> Cache<T> {
@@ -32,15 +39,11 @@ impl<T: Serialize + DeserializeOwned> Cache<T> {
             file,
         }
     }
-
-    pub fn flush(&self) {
-        let file = std::fs::File::create(self.file.as_str()).unwrap();
-        serde_json::to_writer(file, &self.data).unwrap();
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use super::*;
 
     const TEST_CACHE: &str = "res/test_cache.json";
@@ -50,27 +53,27 @@ mod tests {
         pub name: String,
     }
 
-    #[test]
-    fn test_cache() {
-        let cache = Cache::<Test>::from_file(TEST_CACHE.to_string());
-        assert_eq!(cache.data.get("1").unwrap().name, "duck");
+    struct Dropper;
+    impl Drop for Dropper {
+        fn drop(&mut self) {
+            fs::remove_file(TEST_CACHE).unwrap();
+        }
     }
 
     #[test]
-    fn test_cache_flush() {
-        let mut cache = Cache::<Test>::from_file(TEST_CACHE.to_string());
-        assert_eq!(cache.data.get("1").unwrap().name, "duck");
-
-        cache.data.remove("2");
-        cache.data.insert(
-            "2".to_string(),
-            Test {
-                name: "goose".to_string(),
-            },
-        );
-        cache.flush();
+    fn test_cache() {
+        let _d = Dropper;
+        {
+            let mut cache = Cache::<Test>::from_file(TEST_CACHE.to_string());
+            cache.data.insert(
+                "1".to_string(),
+                Test {
+                    name: "duck".to_string(),
+                },
+            );
+        }
 
         let cache = Cache::<Test>::from_file(TEST_CACHE.to_string());
-        assert_eq!(cache.data.get("2").unwrap().name, "goose");
+        assert_eq!(cache.data.get("1").unwrap().name, "duck");
     }
 }

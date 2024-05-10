@@ -1,5 +1,5 @@
 use crate::cache::Cache;
-use crate::client;
+use crate::{client};
 use crate::client::bundle::Bundle;
 use crate::client::tx::BundleTx;
 use crate::client::{Client, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS};
@@ -8,6 +8,7 @@ use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use tokio::task::JoinSet;
 use tracing::{error, info, warn};
+use crate::utils::file;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -102,7 +103,6 @@ impl Cli {
             };
         }
 
-        self.cache.flush();
         Ok(())
     }
 
@@ -156,7 +156,7 @@ impl Cli {
                     info!("transaction: {}", tx);
 
                     self.cache.data.insert(tx.id.clone(), tx.clone());
-                    self.save_bundle(&tx.id, bundle)?;
+                    file::save_serde_json(self.get_bundle_path(&tx.id), &bundle.items)?;
                 }
                 Err(e) => {
                     error!("batch task join failed: {e}");
@@ -212,7 +212,7 @@ impl Cli {
                 warn!("bundle file not found, fetching: {}", tx_id);
 
                 let bundle = self.client.get_bundle_data(tx).await?;
-                self.save_bundle(tx_id, bundle)?;
+                file::save_serde_json(self.get_bundle_path(tx_id), &bundle.items)?;
             }
             return Ok(());
         }
@@ -221,25 +221,11 @@ impl Cli {
         info!("transaction: {}", tx);
 
         self.cache.data.insert(tx_id.clone(), tx.clone());
-        self.save_bundle(tx_id, bundle)?;
+        file::save_serde_json(self.get_bundle_path(tx_id), &bundle.items)?;
         Ok(())
     }
 
     fn get_bundle_path(&self, tx_id: &String) -> PathBuf {
         Path::new(&self.args.out_dir).join(format!("{}.json", tx_id))
-    }
-
-    fn save_bundle(&self, tx_id: &String, bundle: Bundle) -> Result<(), Error> {
-        let path = self.get_bundle_path(tx_id);
-        if !path.exists() {
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        }
-
-        info!("saving bundle to: {}", path.to_str().unwrap());
-
-        let json = serde_json::to_string(&bundle.items).unwrap();
-        std::fs::write(path, json)?;
-
-        Ok(())
     }
 }

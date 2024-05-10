@@ -1,6 +1,8 @@
 use sha2::Digest;
 use thiserror::Error;
 
+pub mod file;
+
 #[derive(Error, PartialEq, Debug)]
 pub enum Error {
     #[error("overflow error")]

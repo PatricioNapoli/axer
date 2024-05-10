@@ -63,7 +63,7 @@ These are the argument defaults:
 }
 ```
 
-After running any mode, the output directory will contain the parsed bundle array files in json format for each transaction.  
+After running any mode, the output directory (defaults to `out/<id>.json`) will contain the parsed bundle array files in json format for each transaction.  
 In interactive mode, tx cache is only saved when exiting with 'q'.
 
 # Logs

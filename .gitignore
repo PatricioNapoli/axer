@@ -9,3 +9,6 @@ target/
 **/*.rs.bk
 
 .DS_Store
+
+cache.json
+out/

@@ -22,6 +22,8 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("bundle error: {0}")]
     BundleError(#[from] bundle::Error),
+    #[error("bundletx error: {0}")]
+    BundleTxError(#[from] bundle::tx::Error),
 }
 
 pub const TAGS_AVRO_SCHEMA: &str = r#"
@@ -76,6 +78,8 @@ impl Client {
         return match response.status() {
             StatusCode::OK => {
                 let tx = response.json::<BundleTx>().await.map_err(Error::from)?;
+                tx.is_valid()?;
+
                 let bundle = self.get_bundle_data(&tx).await?;
 
                 Ok((tx, bundle))

@@ -197,7 +197,13 @@ impl Cli {
             }
 
             let tx_id = input.trim();
-            self.get_or_fetch_bundle(&tx_id.to_string()).await?;
+
+            match self.get_or_fetch_bundle(&tx_id.to_string()).await {
+                Ok(_) => {},
+                Err(e) => {
+                    error!("failed to fetch transaction: {e}");
+                }
+            }
         }
     }
 
